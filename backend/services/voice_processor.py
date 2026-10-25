@@ -10,10 +10,20 @@ load_dotenv()
 # Primary model - gemini-3.1-flash-lite-preview confirmed available on v1beta
 DEFAULT_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.1-flash-lite-preview')
 
-client = genai.Client(
-    api_key=os.getenv('GOOGLE_API_KEY'),
-    http_options={'api_version': 'v1beta'}
-)
+def get_genai_client():
+    api_key = os.getenv('GOOGLE_API_KEY')
+    if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("GOOGLE_API_KEY")
+        except Exception:
+            pass
+    if not api_key:
+        raise ValueError("GOOGLE_API_KEY is not set. Please set it in Streamlit Secrets or environment variable.")
+    return genai.Client(
+        api_key=api_key,
+        http_options={'api_version': 'v1beta'}
+    )
 
 def process_audio(file_path: str) -> str:
     # UPDATED INSTRUCTION: Added msg_en and msg_ur to keep both versions separate
@@ -28,6 +38,8 @@ def process_audio(file_path: str) -> str:
         "Example Output: "
         "{\"action\": \"add\", \"item\": \"flour\", \"qty\": 50, \"unit\": \"kg\", \"msg_en\": \"Added 50 Flour to stock\", \"msg_ur\": \"✅ 50 کلو آٹا اسٹاک میں شامل کر دیا گیا\"}"
     )
+
+    client = get_genai_client()
 
     uploaded_file = client.files.upload(
         file=file_path,
