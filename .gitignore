@@ -1,0 +1,31 @@
+# Environment variables (contains API keys - NEVER push!)
+.env
+*.env
+.env.*
+
+# Firebase service account keys
+*firebase*.json
+*service-account*.json
+firebase-key.json
+
+# Python virtual environment
+venv/
+env/
+.venv/
+backend/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
