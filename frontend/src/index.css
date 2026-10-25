@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-telenor-blue: #0073e6;
+  --color-telenor-red: #e4002b;
+  --animate-progress: progress 1.5s ease-in-out infinite;
+}
+
+@keyframes progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@utility glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Urdu font support */
+@utility font-urdu {
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', 'Inter', serif;
+  direction: rtl;
+  line-height: 2.2;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f0f4f8;
+  margin: 0;
+  padding: 0;
+}
+
+/* Fix for Tailwind v4: ensure custom colors work as CSS vars */
+.bg-telenor-blue { background-color: var(--color-telenor-blue); }
+.bg-telenor-red  { background-color: var(--color-telenor-red); }
+.text-telenor-blue { color: var(--color-telenor-blue); }
+.text-telenor-red  { color: var(--color-telenor-red); }
+.border-telenor-blue { border-color: var(--color-telenor-blue); }
+.border-telenor-red  { border-color: var(--color-telenor-red); }
+.border-l-telenor-red { border-left-color: var(--color-telenor-red); }
+.border-l-green-500 { border-left-color: #22c55e; }
+.shadow-blue-500\/30 { box-shadow: 0 10px 15px -3px rgba(59,130,246,.3); }
+
+/* Animate bounce for low stock */
+@keyframes bounce-stock {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-bounce {
+  animation: bounce-stock 1s infinite;
+}
