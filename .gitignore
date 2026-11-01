@@ -31,4 +31,6 @@ Thumbs.db
 *.log
 
 hf_space/
+.streamlit/secrets.toml
+.streamlit/
 

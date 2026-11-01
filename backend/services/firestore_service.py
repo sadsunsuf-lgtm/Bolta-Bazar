@@ -4,32 +4,78 @@ import json
 
 # Initialize Firestore safely
 db = None
-try:
-    import firebase_admin
-    from firebase_admin import credentials, firestore
+_firestore_initialized = False
 
-    if not firebase_admin._apps:
-        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        cred_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
-        if cred_path and os.path.exists(cred_path):
-            firebase_admin.initialize_app(credentials.Certificate(cred_path))
-            print(f"Firebase initialized with service account file: {cred_path}")
-            db = firestore.client()
-        elif cred_json:
-            import json as pyjson
-            cred_dict = pyjson.loads(cred_json)
-            firebase_admin.initialize_app(credentials.Certificate(cred_dict))
-            print("Firebase initialized with FIREBASE_CREDENTIALS_JSON secret")
-            db = firestore.client()
+def init_firestore():
+    global db, _firestore_initialized
+    if _firestore_initialized:
+        return db
+    _firestore_initialized = True
+
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, firestore
+
+        if not firebase_admin._apps:
+            cred_dict = None
+            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            cred_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+
+            # Check Streamlit secrets
+            try:
+                import streamlit as st
+                if hasattr(st, "secrets"):
+                    if "firebase" in st.secrets:
+                        cred_dict = dict(st.secrets["firebase"])
+                    elif "FIREBASE_CREDENTIALS_JSON" in st.secrets:
+                        cred_json = st.secrets["FIREBASE_CREDENTIALS_JSON"]
+            except Exception:
+                pass
+
+            if cred_dict:
+                if "private_key" in cred_dict and isinstance(cred_dict["private_key"], str):
+                    cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+                firebase_admin.initialize_app(credentials.Certificate(cred_dict))
+                db = firestore.client()
+                print("Firebase initialized via Streamlit [firebase] secrets")
+            elif cred_path and os.path.exists(cred_path):
+                firebase_admin.initialize_app(credentials.Certificate(cred_path))
+                db = firestore.client()
+                print(f"Firebase initialized with service account file: {cred_path}")
+            elif cred_json:
+                import json as pyjson
+                if isinstance(cred_json, str):
+                    cred_dict = pyjson.loads(cred_json)
+                else:
+                    cred_dict = dict(cred_json)
+                if "private_key" in cred_dict and isinstance(cred_dict["private_key"], str):
+                    cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+                firebase_admin.initialize_app(credentials.Certificate(cred_dict))
+                db = firestore.client()
+                print("Firebase initialized with FIREBASE_CREDENTIALS_JSON")
+            else:
+                try:
+                    firebase_admin.initialize_app()
+                    db = firestore.client()
+                    print("Firebase initialized with Application Default Credentials (ADC)")
+                except Exception as adc_err:
+                    print(f"[Firestore] ADC not available: {adc_err}")
+                    db = None
         else:
-            firebase_admin.initialize_app()
             db = firestore.client()
-            print("Firebase initialized with Application Default Credentials (ADC)")
-    else:
-        db = firestore.client()
-except Exception as e:
-    print(f"⚠️ Firestore not configured or auth missing: {e}. Using local JSON inventory store.")
-    db = None
+    except Exception as e:
+        print(f"[Firestore] Firestore not configured or auth missing: {e}. Using local JSON inventory store.")
+        db = None
+    return db
+
+# Auto-initialize on import
+init_firestore()
+
+def is_firestore_connected() -> bool:
+    global db
+    if db is None:
+        init_firestore()
+    return db is not None
 
 # Local fallback store file
 LOCAL_INVENTORY_FILE = os.path.join(os.path.dirname(__file__), "local_inventory.json")
@@ -61,6 +107,8 @@ def _save_local_inventory(items):
 
 def get_inventory():
     global db
+    if db is None:
+        init_firestore()
     if db is not None:
         try:
             docs = db.collection("inventory").stream()
@@ -78,10 +126,38 @@ def get_inventory():
     
     return _load_local_inventory()
 
+def normalize_text(text: str) -> str:
+    import re
+    return re.sub(r'[^\w\s]', ' ', str(text).lower()).strip()
+
+def item_matches(inv_name: str, search_name: str) -> bool:
+    norm_inv = normalize_text(inv_name)
+    norm_q = normalize_text(search_name)
+    if not norm_q:
+        return False
+    if norm_inv == norm_q or norm_q in norm_inv or norm_inv in norm_q:
+        return True
+    if set(norm_inv.split()) & set(norm_q.split()):
+        return True
+    synonyms = {
+        'flour': ['atta', 'aata', 'wheat', 'maida'],
+        'sugar': ['cheeni', 'chini', 'shakar'],
+        'rice': ['chawal'],
+        'tea': ['chai', 'patti'],
+        'oil': ['tel', 'cooking oil', 'ghee']
+    }
+    for primary, syn_list in synonyms.items():
+        all_s = set([primary] + syn_list)
+        if any(s in norm_q for s in all_s) and any(s in norm_inv for s in all_s):
+            return True
+    return False
+
 def update_inventory_item(item_name, action, qty):
     global db
+    if db is None:
+        init_firestore()
     now = datetime.datetime.now().isoformat()
-    search_name = str(item_name).strip().lower()
+    search_name = str(item_name).strip()
     change_qty = int(qty)
 
     if db is not None:
@@ -90,7 +166,7 @@ def update_inventory_item(item_name, action, qty):
             target_doc = None
             for doc in docs:
                 data = doc.to_dict()
-                if str(data.get("name", "")).lower() == search_name:
+                if item_matches(data.get("name", ""), search_name):
                     target_doc = doc
                     break
                     
@@ -144,7 +220,7 @@ def update_inventory_item(item_name, action, qty):
     items = _load_local_inventory()
     target = None
     for item in items:
-        if str(item.get("name", "")).lower() == search_name:
+        if item_matches(item.get("name", ""), search_name):
             target = item
             break
             

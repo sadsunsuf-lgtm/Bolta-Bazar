@@ -1,0 +1,37 @@
+[
+  {
+    "id": "item_1",
+    "name": "Atta (Flour)",
+    "stock": 71,
+    "sales": 14,
+    "lastUpdated": "2026-11-01T19:52:18.542197"
+  },
+  {
+    "id": "item_2",
+    "name": "Chawal (Rice)",
+    "stock": 46,
+    "sales": 5,
+    "lastUpdated": "2026-11-01T19:49:59.249465"
+  },
+  {
+    "id": "item_3",
+    "name": "Cheeni (Sugar)",
+    "stock": 45,
+    "sales": 0,
+    "lastUpdated": "2026-11-01T17:30:41.770651"
+  },
+  {
+    "id": "item_4",
+    "name": "Chai Patti (Tea)",
+    "stock": 30,
+    "sales": 0,
+    "lastUpdated": "2026-11-01T17:23:00.000000"
+  },
+  {
+    "id": "item_5",
+    "name": "Cooking Oil",
+    "stock": 40,
+    "sales": 0,
+    "lastUpdated": "2026-11-01T19:51:54.366243"
+  }
+]
